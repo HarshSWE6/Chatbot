@@ -238,6 +238,12 @@ function getFallbackReply(message) {
     { keys: ['hi', 'hello', 'hey', 'good morning', 'good evening', 'good afternoon'],
       reply: () => { lastTopic = null; return "Hello! 👋 Welcome to TechNova Electronics. I'm Nova, your support assistant. How can I help you today?"; }
     },
+    { keys: ['bot', 'robot', 'ai based', 'artificial intelligence', 'who are you', 'what are you', 'are you human', 'real person', 'real ai', 'identity'],
+      reply: () => "I am **Nova**, a conversational AI assistant created for TechNova Electronics. I am designed to help you explore our product catalog, compare devices, check store policies, and solve issues instantly. How can I assist you with our tech today?"
+    },
+    { keys: ['about the company', 'about technova', 'what is technova', 'tell me about technova', 'who is technova', 'company background', 'history'],
+      reply: () => "TechNova Electronics is a premium consumer electronics brand. Our goal is to make cutting-edge technology accessible with premium designs, rapid shipping, and lifetime support. We design top-tier smartphones, laptops, smartwatches, and audio equipment tailored for creators, professionals, and students alike!"
+    },
     { keys: ['product', 'sell', 'catalog', 'what do you'],
       reply: () => { lastTopic = null; return "We offer **Smartphones** (from $349), **Laptops** (from $499), **Audio** (from $99), and **Smartwatches** (from $199). What interests you?"; }
     },
