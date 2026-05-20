@@ -247,22 +247,99 @@ function initTheme() {
 /* ═══════════ VOICE ═══════════ */
 function initVoice() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { dom.micBtn.addEventListener('click', () => toast('Voice not supported in this browser')); return; }
+  if (!SR) {
+    dom.micBtn.style.display = 'none'; // Hide if browser doesn't support it
+    return;
+  }
 
   const rec = new SR();
-  rec.continuous = false; rec.interimResults = true; rec.lang = 'en-US';
-  let on = false;
+  rec.continuous = true;
+  rec.interimResults = true;
+  rec.lang = 'en-US';
 
-  rec.onstart = () => { on = true; dom.micBtn.classList.add('recording'); dom.input.placeholder = '🎙️ Listening...'; };
-  rec.onresult = e => { let t = ''; for (let i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript; dom.input.value = t; dom.sendBtn.disabled = !t.trim(); resize(); };
-  rec.onend = () => {
-    on = false; dom.micBtn.classList.remove('recording'); dom.input.placeholder = 'Ask Nova anything...';
-    const t = dom.input.value.trim();
-    if (t) { sendMessage(t); dom.input.value = ''; dom.sendBtn.disabled = true; resize(); }
+  let active = false;
+  let silenceTimer = null;
+
+  function resetSilenceTimer() {
+    clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => {
+      if (active) {
+        toast('Speech recognition timed out');
+        stopListening(false); // Stop without sending since they stopped talking
+      }
+    }, 8000); // 8 seconds of absolute silence auto-stops
+  }
+
+  rec.onstart = () => {
+    active = true;
+    dom.micBtn.classList.add('recording');
+    dom.input.placeholder = '🎙️ Listening... Speak now';
+    toast('Microphone listening...');
+    resetSilenceTimer();
   };
-  rec.onerror = e => { on = false; dom.micBtn.classList.remove('recording'); dom.input.placeholder = 'Ask Nova anything...'; if (e.error !== 'aborted') toast('Voice error — try again'); };
 
-  dom.micBtn.addEventListener('click', () => { on ? rec.stop() : rec.start(); });
+  rec.onresult = e => {
+    resetSilenceTimer();
+    let interim = '';
+    let final = '';
+
+    for (let i = e.resultIndex; i < e.results.length; ++i) {
+      if (e.results[i].isFinal) {
+        final += e.results[i][0].transcript;
+      } else {
+        interim += e.results[i][0].transcript;
+      }
+    }
+
+    if (final || interim) {
+      dom.input.value = (final + ' ' + interim).trim();
+      dom.sendBtn.disabled = !dom.input.value.trim();
+      resize();
+    }
+  };
+
+  rec.onend = () => {
+    if (active) {
+      stopListening(true);
+    }
+  };
+
+  rec.onerror = e => {
+    if (e.error !== 'no-speech' && e.error !== 'aborted') {
+      toast(`Voice error: ${e.error}`);
+    }
+    stopListening(false);
+  };
+
+  function startListening() {
+    dom.input.value = '';
+    rec.start();
+  }
+
+  function stopListening(shouldSend = true) {
+    active = false;
+    clearTimeout(silenceTimer);
+    rec.abort(); // Force stop SpeechRecognition
+    dom.micBtn.classList.remove('recording');
+    dom.input.placeholder = 'Ask Nova anything...';
+    
+    const text = dom.input.value.trim();
+    if (shouldSend && text) {
+      sendMessage(text);
+      dom.input.value = '';
+      dom.sendBtn.disabled = true;
+      resize();
+    }
+  }
+
+  dom.micBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (active) {
+      stopListening(true); // Send what was spoken
+    } else {
+      startListening();
+    }
+  });
 }
 
 /* ═══════════ LISTENERS ═══════════ */
