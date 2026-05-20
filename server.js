@@ -4,8 +4,8 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ── Read API key from environment ──────────────────────────────
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const HF_TOKEN = process.env.HF_TOKEN || '';
 
 // ── Middleware ──────────────────────────────────────────────────
 app.use(express.json());
@@ -71,73 +71,104 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ error: 'Message is required' });
   }
 
-  // If no API key — use simple fallback
-  if (!GEMINI_API_KEY) {
-    return res.json({
-      reply: getFallbackReply(message),
-      source: 'fallback'
-    });
-  }
-
-  try {
-    // Build conversation for Gemini
-    const contents = [];
-
-    // Add conversation history (last 10 exchanges max)
-    const recentHistory = (history || []).slice(-20);
-    for (const msg of recentHistory) {
-      contents.push({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.text }]
-      });
-    }
-
-    // Add current message
-    contents.push({
-      role: 'user',
-      parts: [{ text: message }]
-    });
-
-    // Call Gemini API
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-          contents,
-          generationConfig: {
-            temperature: 0.7,
-            topP: 0.9,
-            maxOutputTokens: 1024,
-          }
-        })
+  // 1. Try Gemini API if key is present
+  if (GEMINI_API_KEY) {
+    try {
+      const contents = [];
+      const recentHistory = (history || []).slice(-20);
+      for (const msg of recentHistory) {
+        contents.push({
+          role: msg.role === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.text }]
+        });
       }
-    );
+      contents.push({
+        role: 'user',
+        parts: [{ text: message }]
+      });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error('Gemini API error:', response.status, errorBody);
-      throw new Error(`API returned ${response.status}`);
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+            contents,
+            generationConfig: {
+              temperature: 0.7,
+              topP: 0.9,
+              maxOutputTokens: 1024,
+            }
+          })
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (reply) {
+          return res.json({ reply, source: 'gemini' });
+        }
+      } else {
+        const errTxt = await response.text();
+        console.warn('Gemini API failed, attempting Hugging Face fallback...', errTxt);
+      }
+    } catch (err) {
+      console.warn('Gemini error, attempting Hugging Face fallback...', err.message);
     }
-
-    const data = await response.json();
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!reply) {
-      throw new Error('No response from AI');
-    }
-
-    res.json({ reply, source: 'ai' });
-
-  } catch (err) {
-    console.error('Chat error:', err.message);
-    res.json({
-      reply: getFallbackReply(message),
-      source: 'fallback'
-    });
   }
+
+  // 2. Try Hugging Face Inference API if HF_TOKEN is present
+  if (HF_TOKEN) {
+    try {
+      const messages = [{ role: 'system', content: SYSTEM_PROMPT }];
+      const recentHistory = (history || []).slice(-10);
+      for (const msg of recentHistory) {
+        messages.push({
+          role: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.text
+        });
+      }
+      messages.push({ role: 'user', content: message });
+
+      const response = await fetch(
+        'https://api-inference.huggingface.co/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${HF_TOKEN}`
+          },
+          body: JSON.stringify({
+            model: 'Qwen/Qwen2.5-72B-Instruct',
+            messages,
+            max_tokens: 1024,
+            temperature: 0.7
+          })
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const reply = data.choices?.[0]?.message?.content;
+        if (reply) {
+          return res.json({ reply, source: 'huggingface' });
+        }
+      } else {
+        const errTxt = await response.text();
+        console.warn('Hugging Face Inference API failed...', errTxt);
+      }
+    } catch (err) {
+      console.warn('Hugging Face error...', err.message);
+    }
+  }
+
+  // 3. Fallback to smart local keyword matcher
+  res.json({
+    reply: getFallbackReply(message),
+    source: 'fallback'
+  });
 });
 
 // ── Fallback (no API key / API error) ──────────────────────────

@@ -134,11 +134,33 @@ function addBotMessage(text) {
       </svg>
     </div>
     <div class="message-content">
-      <div class="message-bubble">${renderMd(text)}</div>
+      <div class="message-bubble"></div>
       <span class="message-time">Nova · ${timeNow()}</span>
     </div>`;
   dom.messages.appendChild(row);
   scrollDown();
+
+  const bubble = row.querySelector('.message-bubble');
+  let i = 0;
+  const speed = 10; // Fast typing speed (ms per character)
+
+  function type() {
+    if (i < text.length) {
+      bubble.textContent = text.slice(0, i + 1) + '▊';
+      i++;
+      // Auto-scroll as it types
+      const container = dom.messages;
+      const isNearBottom = container.scrollHeight - container.clientHeight - container.scrollTop < 100;
+      if (isNearBottom) {
+        scrollDown();
+      }
+      setTimeout(type, speed);
+    } else {
+      bubble.innerHTML = renderMd(text);
+      scrollDown();
+    }
+  }
+  type();
 }
 
 function addUserMessage(text) {
