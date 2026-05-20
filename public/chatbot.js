@@ -141,25 +141,44 @@ function addBotMessage(text) {
   scrollDown();
 
   const bubble = row.querySelector('.message-bubble');
-  let i = 0;
-  const speed = 10; // Fast typing speed (ms per character)
+  const htmlContent = renderMd(text);
+  let index = 0;
+  let currentHtml = '';
+  const speed = 10; // Speed of typing in milliseconds
 
   function type() {
-    if (i < text.length) {
-      bubble.textContent = text.slice(0, i + 1) + '▊';
-      i++;
-      // Auto-scroll as it types
-      const container = dom.messages;
-      const isNearBottom = container.scrollHeight - container.clientHeight - container.scrollTop < 100;
-      if (isNearBottom) {
-        scrollDown();
+    if (index >= htmlContent.length) {
+      bubble.innerHTML = htmlContent; // Set final clean HTML (removes cursor)
+      scrollDown();
+      return;
+    }
+
+    // If we hit an HTML tag, skip over it and render it instantly
+    if (htmlContent[index] === '<') {
+      const tagEnd = htmlContent.indexOf('>', index);
+      if (tagEnd !== -1) {
+        currentHtml += htmlContent.slice(index, tagEnd + 1);
+        index = tagEnd + 1;
+        type(); // Call recursively immediately to not pause on tags
+        return;
       }
-      setTimeout(type, speed);
-    } else {
-      bubble.innerHTML = renderMd(text);
+    }
+
+    // Append standard character
+    currentHtml += htmlContent[index];
+    bubble.innerHTML = currentHtml + '▊';
+    index++;
+
+    // Scroll down if close to bottom
+    const container = dom.messages;
+    const isNearBottom = container.scrollHeight - container.clientHeight - container.scrollTop < 120;
+    if (isNearBottom) {
       scrollDown();
     }
+
+    setTimeout(type, speed);
   }
+
   type();
 }
 
