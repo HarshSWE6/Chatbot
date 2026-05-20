@@ -228,10 +228,30 @@ function getFallbackReply(message) {
   const responses = [
     { keys: ['compare', 'better', 'best', 'recommend', 'which one', 'difference', 'vs'],
       reply: () => {
-        if (lastTopic === 'phone') return "Great question! Here's a quick comparison:\n\n📱 **X15 Pro** ($899) — Best camera (200MP) & performance. For power users.\n📱 **X15** ($649) — Best value. Great all-rounder for most people.\n📱 **Lite** ($349) — Best battery life. Perfect for budget-conscious buyers.\n\n**My pick:** The **X15** hits the sweet spot for most users. Want to know more about any specific model?";
-        if (lastTopic === 'laptop') return "Here's how they compare:\n\n💻 **ProBook Ultra 16** ($1,299) — Best for creative pros & gaming.\n💻 **Air 14** ($799) — Best for portability (1.2kg, 20hr battery).\n💻 **Student** ($499) — Best value with free Microsoft 365.\n\n**My pick:** The **Air 14** is the best all-rounder. Need more details?";
-        if (lastTopic === 'audio') return "Quick comparison:\n\n🎧 **NovaBuds Pro** ($199) — Best sound with ANC. For audiophiles.\n🎧 **NovaBuds Air** ($99) — Most comfortable (open-ear). For everyday use.\n🔊 **NovaSound Bar** ($349) — Best home audio with Dolby Atmos.";
-        if (lastTopic === 'watch') return "Let me compare:\n\n⌚ **NovaWatch Elite** ($399) — Best features (ECG, GPS, 7-day battery). For health-focused users.\n⌚ **NovaWatch Fit** ($199) — Best value. 10-day battery, 100+ workouts. Great starter smartwatch.";
+        // Try to identify the category from the current message first
+        let activeTopic = lastTopic;
+        if (msg.includes('phone') || msg.includes('mobile') || msg.includes('x15')) activeTopic = 'phone';
+        else if (msg.includes('laptop') || msg.includes('computer') || msg.includes('probook')) activeTopic = 'laptop';
+        else if (msg.includes('audio') || msg.includes('earbuds') || msg.includes('headphone') || msg.includes('speaker') || msg.includes('buds') || msg.includes('soundbar')) activeTopic = 'audio';
+        else if (msg.includes('watch') || msg.includes('wearable')) activeTopic = 'watch';
+
+        if (activeTopic === 'phone') {
+          lastTopic = 'phone';
+          return "Great question! Here's a quick comparison:\n\n📱 **X15 Pro** ($899) — Best camera (200MP) & performance. For power users.\n📱 **X15** ($649) — Best value. Great all-rounder for most people.\n📱 **Lite** ($349) — Best battery life. Perfect for budget-conscious buyers.\n\n**My pick:** The **X15** hits the sweet spot for most users. Want to know more about any specific model?";
+        }
+        if (activeTopic === 'laptop') {
+          lastTopic = 'laptop';
+          return "Here's how they compare:\n\n💻 **ProBook Ultra 16** ($1,299) — Best for creative pros & gaming.\n💻 **Air 14** ($799) — Best for portability (1.2kg, 20hr battery).\n💻 **Student** ($499) — Best value with free Microsoft 365.\n\n**My pick:** The **Air 14** is the best all-rounder. Need more details?";
+        }
+        if (activeTopic === 'audio') {
+          lastTopic = 'audio';
+          return "Quick comparison of our audio gear:\n\n🎧 **NovaBuds Pro** ($199) — Premium sound with Active Noise Cancellation.\n🎧 **NovaBuds Air** ($99) — Comfortable open-ear design for active use.\n🔊 **NovaSound Bar** ($349) — Cinematic home theater sound with Dolby Atmos.\n\n**My pick:** The **NovaBuds Pro** is our top recommendation for premium individual listening, while the **NovaSound Bar** is best for your home TV setup.";
+        }
+        if (activeTopic === 'watch') {
+          lastTopic = 'watch';
+          return "Let me compare our watch models:\n\n⌚ **NovaWatch Elite** ($399) — Premium metrics (ECG, GPS, 7-day battery).\n⌚ **NovaWatch Fit** ($199) — Excellent fitness tracking & 10-day battery life.\n\n**My pick:** The **NovaWatch Fit** is the best value, but go with the **Elite** if you need standalone GPS or ECG heart-monitoring.";
+        }
+        
         return "I'd be happy to compare! Which category are you interested in — **smartphones**, **laptops**, **audio**, or **smartwatches**?";
       }
     },
