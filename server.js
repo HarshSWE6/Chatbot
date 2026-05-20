@@ -5,6 +5,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const COHERE_API_KEY = process.env.COHERE_API_KEY || '';
 const HF_TOKEN = process.env.HF_TOKEN || '';
 
 // ── Middleware ──────────────────────────────────────────────────
@@ -119,7 +120,45 @@ app.post('/api/chat', async (req, res) => {
     }
   }
 
-  // 2. Try Hugging Face Inference API if HF_TOKEN is present
+  // 2. Try Cohere API if key is present
+  if (COHERE_API_KEY) {
+    try {
+      const recentHistory = (history || []).slice(-10);
+      const cohereHistory = recentHistory.map(msg => ({
+        role: msg.role === 'user' ? 'USER' : 'CHATBOT',
+        message: msg.text
+      }));
+
+      const response = await fetch('https://api.cohere.com/v1/chat', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${COHERE_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'command-r-plus',
+          message: message,
+          preamble: SYSTEM_PROMPT,
+          chat_history: cohereHistory
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const reply = data.text;
+        if (reply) {
+          return res.json({ reply, source: 'cohere' });
+        }
+      } else {
+        const errTxt = await response.text();
+        console.warn('Cohere API failed, attempting Hugging Face fallback...', errTxt);
+      }
+    } catch (err) {
+      console.warn('Cohere error, attempting Hugging Face fallback...', err.message);
+    }
+  }
+
+  // 3. Try Hugging Face Inference API if HF_TOKEN is present
   if (HF_TOKEN) {
     try {
       const messages = [{ role: 'system', content: SYSTEM_PROMPT }];
@@ -248,16 +287,21 @@ function getFallbackReply(message) {
 
 // ── Health check ───────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
+  let activeProvider = 'fallback';
+  if (GEMINI_API_KEY) activeProvider = 'gemini';
+  else if (COHERE_API_KEY) activeProvider = 'cohere';
+  else if (HF_TOKEN) activeProvider = 'huggingface';
+
   res.json({
     status: 'ok',
-    ai: GEMINI_API_KEY ? 'enabled' : 'fallback',
+    ai: activeProvider,
     timestamp: new Date().toISOString()
   });
 });
 
 // ── Status endpoint (for frontend) ────────────────────────────
 app.get('/api/status', (req, res) => {
-  res.json({ aiEnabled: !!GEMINI_API_KEY });
+  res.json({ aiEnabled: !!(GEMINI_API_KEY || COHERE_API_KEY || HF_TOKEN) });
 });
 
 // ── Catch-all ──────────────────────────────────────────────────
@@ -266,9 +310,16 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
+  let providerStr = '⚠️ None (Local Fallback)';
+  if (GEMINI_API_KEY) providerStr = '✅ Google Gemini';
+  else if (COHERE_API_KEY) providerStr = '✅ Cohere Chat';
+  else if (HF_TOKEN) providerStr = '✅ Hugging Face Qwen';
+
   console.log(`\n🤖 TechNova Support Chatbot is running!`);
-  console.log(`   Local:  http://localhost:${PORT}`);
-  console.log(`   AI:     ${GEMINI_API_KEY ? '✅ Gemini API connected' : '⚠️  No API key — using fallback mode'}`);
-  console.log(`   ${GEMINI_API_KEY ? '' : '  Set GEMINI_API_KEY env variable for AI responses'}`);
+  console.log(`   Local:            http://localhost:${PORT}`);
+  console.log(`   Primary AI:       ${providerStr}`);
+  console.log(`   Gemini key:       ${GEMINI_API_KEY ? 'Present' : 'Not Set'}`);
+  console.log(`   Cohere key:       ${COHERE_API_KEY ? 'Present' : 'Not Set'}`);
+  console.log(`   HF Token:         ${HF_TOKEN ? 'Present' : 'Not Set'}`);
   console.log(`   Ready to help customers!\n`);
 });
