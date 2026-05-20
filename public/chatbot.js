@@ -77,7 +77,7 @@ const state = { history: [], busy: false, aiEnabled: false };
 
   // Welcome message
   setTimeout(() => {
-    addBotMessage("Hi there! 👋 I'm **Nova**, your TechNova support assistant. Ask me anything about our products, pricing, shipping, or support — I'm here to help!");
+    addBotMessage("Hi there! I'm **Nova**, your TechNova support assistant. Ask me anything about our products, pricing, shipping, or support — I'm here to help!");
   }, 800);
 })();
 
@@ -236,7 +236,7 @@ function renderWelcome() {
         <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
       </svg>
     </div>
-    <h2>Welcome to TechNova 👋</h2>
+    <h2>Welcome to TechNova</h2>
     <p>AI-powered support for all your electronics needs. Ask me anything!</p>
     <div class="welcome-features">
       ${chips.map(([icon, label, q]) => `<div class="feature-chip" onclick="ask('${q}')"><div class="feature-chip-icon">${icon}</div><div class="feature-chip-text">${label}</div></div>`).join('')}
