@@ -324,7 +324,7 @@ function initVoice() {
     let interim = '';
     let final = '';
 
-    for (let i = e.resultIndex; i < e.results.length; ++i) {
+    for (let i = 0; i < e.results.length; ++i) {
       if (e.results[i].isFinal) {
         final += e.results[i][0].transcript;
       } else {
