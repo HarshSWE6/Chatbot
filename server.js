@@ -24,7 +24,7 @@ const SYSTEM_PROMPT = `You are **Nova**, the friendly and professional AI custom
 - Brand: TechNova Electronics
 - Tagline: "Premium tech, delivered fast."
 - Phone: XXXXXXXXXXX (Mon–Fri 9am–6pm EST)
-- Email: support@technova-electronics.com
+- Email: xxxxxxxxxxx@xxxxxxxxxxx.com
 - Website: www.technova-electronics.com
 
 ## Product Catalog
@@ -196,10 +196,10 @@ function getFallbackReply(message) {
       reply: () => "All products include warranty (1-2 years). **TechNova Care+** adds 2 extra years + accidental damage coverage. Call XXXXXXXXXXX for claims."
     },
     { keys: ['contact', 'support', 'human', 'call', 'email', 'agent'],
-      reply: () => "Reach us at: 📞 **XXXXXXXXXXX** (Mon-Fri 9-6 EST), 📧 **support@technova-electronics.com**, or 💬 live chat on our website."
+      reply: () => "Reach us at: 📞 **XXXXXXXXXXX** (Mon-Fri 9-6 EST), 📧 **xxxxxxxxxxx@xxxxxxxxxxx.com**, or 💬 live chat on our website."
     },
     { keys: ['thank', 'bye', 'goodbye', 'thanks'],
-      reply: () => { lastTopic = null; return "You're welcome! Thanks for choosing TechNova. Reach us anytime at XXXXXXXXXXX or support@technova-electronics.com. Have a great day! 😊"; }
+      reply: () => { lastTopic = null; return "You're welcome! Thanks for choosing TechNova. Reach us anytime at XXXXXXXXXXX or xxxxxxxxxxx@xxxxxxxxxxx.com. Have a great day! 😊"; }
     },
     { keys: ['pay', 'payment', 'credit card', 'financing', 'installment'],
       reply: () => "We accept Visa, Mastercard, Amex, PayPal, Apple Pay, and Google Pay. **Klarna** and **Afterpay** for buy-now-pay-later. 0% APR financing on orders $500+."
